@@ -362,4 +362,4 @@ npm run test       # Vitest unit tests
 
 ---
 
-Built by [Akshad Kaloni](https://github.com/Akshadtech17)
+Built by [Akshad Aloni](https://github.com/Akshadtech17)
