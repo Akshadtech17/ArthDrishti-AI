@@ -1,365 +1,230 @@
-# ArthDrishti — AI Business Intelligence
-
-> **"Arth"** (अर्थ) means *meaning / wealth* in Sanskrit. **"Drishti"** (दृष्टि) means *vision*. Together: **a vision for business meaning**.
-
-ArthDrishti is a full-stack AI platform that gives you deep, structured intelligence on any business — Indian or global. Enter a company name, get a full SWOT analysis, competitive breakdown, decision intelligence, and strategic learnings in seconds, powered by Groq's LLaMA 70B model.
-
-**Live:** [https://arthdrishti-ai.vercel.app](https://arthdrishti-ai.vercel.app)
+# ArthDrishti: An AI-Powered Business Intelligence Platform for Structured Enterprise Analysis
 
 ---
 
-## Features
+## Abstract
 
-| Feature | Description |
-|---|---|
-| AI Business Analysis | Full SWOT, strategy, financial model, and competitive analysis for any business |
-| Business of the Day | AI-curated daily business case study, auto-generated via cron |
-| Decision Simulator | Quiz game built from real analysis data — test your strategic thinking |
-| Business Explorer | 500+ companies across 18 categories (Indian & global) — click any to analyze |
-| History & Watchlist | Browse past analyses, save businesses, track your learning streak |
-| Freemium + Pro | 3 free analyses/day; Pro (₹199/month) for unlimited access |
-| Payments | Razorpay checkout — order creation + signature verification via edge functions |
-| SSR SEO | Vercel serverless function injects per-analysis `<meta>` tags for crawlers |
-| PWA-ready | Web manifest, mobile bottom nav, iOS safe-area support |
+ArthDrishti is a full-stack, AI-powered business intelligence platform that generates structured, multi-dimensional analyses of real-world businesses on demand. The system combines a React-based single-page application with a Supabase PostgreSQL backend and Groq-hosted large language model inference to produce analyses covering SWOT matrices, strategic decision histories, comparative case studies, and actionable learnings. A freemium access model with integrated Razorpay payment processing enables sustainable operation. Wikipedia's REST API grounds AI-generated content in factual context, mitigating hallucination risk. The platform targets students, entrepreneurs, and business analysts seeking rapid, accessible business intelligence without the cost or complexity of traditional consulting tools. Deployed on Vercel with server-side rendering for social-sharing meta tags, ArthDrishti is publicly accessible at https://arthdrishti-ai.vercel.app.
 
 ---
 
-## System Architecture
+## I. Introduction
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                        USER BROWSER                             │
-│              React 18 + Vite + TypeScript + Tailwind            │
-└────────────────────────────┬────────────────────────────────────┘
-                             │ HTTPS
-          ┌──────────────────┴──────────────────┐
-          │                                     │
-          ▼                                     ▼
-┌─────────────────────┐             ┌───────────────────────┐
-│   VERCEL (Frontend) │             │  SUPABASE (Backend)   │
-│                     │             │                       │
-│  Static SPA (Vite)  │◄────REST───►│  PostgreSQL Database  │
-│                     │             │  Row-Level Security   │
-│  /api/analysis.ts   │             │                       │
-│  (SSR meta tags for │             │  Supabase Auth        │
-│   search crawlers)  │             │  (Google OAuth + OTP) │
-└─────────────────────┘             │                       │
-                                    │  Edge Functions (Deno)│
-                                    │  ┌─────────────────┐  │
-                                    │  │analyze-business │  │
-                                    │  │generate-botd    │  │──► Groq API
-                                    │  │create-razorpay  │  │    (LLaMA 70B)
-                                    │  │verify-razorpay  │  │──► Razorpay API
-                                    │  │seed-data        │  │
-                                    │  └─────────────────┘  │
-                                    │                       │
-                                    │  pg_cron (Supabase)   │
-                                    │  Runs generate-botd   │
-                                    │  daily at midnight    │
-                                    └───────────────────────┘
-```
+Business intelligence and competitive analysis have traditionally been the domain of expensive consulting firms, proprietary data vendors, and domain experts with years of industry experience. Students entering business education, early-stage entrepreneurs evaluating market opportunities, and independent analysts lack affordable, immediate access to the structured analytical frameworks—SWOT analysis, Porter's Five Forces analogues, decision post-mortems—that inform high-quality strategic thinking.
 
-### Data Flow — Business Analysis
+Large language models (LLMs) have matured to the point where they can produce coherent, structured, domain-specific text at near-expert level when provided with appropriate context and constrained output schemas. However, raw LLM interfaces offer no persistence, no UX layer, no structured data contracts, and no access control—leaving significant engineering work between a capable model and a usable product.
 
-```
-User types company name
-        │
-        ▼
-Frontend checks Supabase DB
-   ├── Cached? → Return instantly (free, no quota used)
-   └── New?    → Check daily quota
-                    ├── Limit reached? → Show FreemiumGate
-                    └── OK? → Call analyze-business edge function
-                                    │
-                                    ▼
-                            Groq LLaMA-3.3-70B
-                            (structured JSON prompt)
-                                    │
-                                    ▼
-                        Parse + store in Supabase
-                                    │
-                                    ▼
-                        Stream results to frontend
-                        AnalysisResults component renders
-```
+ArthDrishti addresses this gap by wrapping Groq's LLaMA 3.3 70B model in a purpose-built product layer: a structured JSON output schema covering ten distinct analytical dimensions, a 7-day analysis cache to prevent redundant inference costs, a Wikipedia enrichment pipeline to ground outputs in factual data, a freemium quota system with payment-based upgrade path, and a suite of secondary features (daily curated case study, decision quiz, watchlist, streak tracking) that encourage regular engagement. The result is a self-contained business intelligence tool accessible to any user with a browser, requiring no prior expertise and no cost for casual use.
 
 ---
 
-## Tech Stack
+## II. Methodology
 
-### Frontend
-| Layer | Technology |
-|---|---|
-| Framework | React 18 + TypeScript |
-| Build tool | Vite 5 (SWC) |
-| Styling | Tailwind CSS 3 + shadcn/ui (Radix UI primitives) |
-| Animation | Framer Motion 11 |
-| Routing | React Router DOM v6 |
-| State / Cache | TanStack Query v5 |
-| Forms | React Hook Form + Zod |
-| Icons | Lucide React |
+### A. System Architecture
 
-### Backend
-| Layer | Technology |
-|---|---|
-| Database | Supabase (PostgreSQL) with Row-Level Security |
-| Auth | Supabase Auth (Google OAuth + Magic Link) |
-| Edge Functions | Supabase Edge Functions (Deno runtime) |
-| AI Model | Groq API — `llama-3.3-70b-versatile` |
-| Payments | Razorpay (test mode) |
-| Cron | Supabase pg_cron — daily Business of the Day |
-| SSR/SEO | Vercel Serverless Function (`api/analysis.ts`) |
+The platform follows a client-server architecture with three tiers:
 
-### Infrastructure
-| Service | Purpose |
-|---|---|
-| Vercel | Frontend hosting + SSR meta endpoint |
-| Supabase | Database + Auth + Edge Functions |
-| GitHub | Source control + CI trigger for Vercel |
-| Groq | AI inference (API key stored in Supabase secrets only) |
-| Razorpay | Payment processing |
+1. **Presentation Tier:** A React 18 single-page application (SPA) built with Vite and TypeScript, styled with Tailwind CSS and shadcn/ui component primitives. Client-side routing is handled by React Router v6. Asynchronous server state is managed via TanStack Query v5.
 
----
+2. **Application Tier:** Five Supabase Edge Functions running the Deno runtime act as the serverless backend. These functions handle AI inference orchestration, payment order creation and verification, and scheduled content generation. Secret management is delegated entirely to the Supabase secrets store, ensuring no API keys are exposed in the browser bundle.
 
-## File Structure
+3. **Data Tier:** A PostgreSQL database hosted on Supabase stores analyses, daily curated content, pro subscription records, and event telemetry. Row-Level Security (RLS) policies enforce access control at the database layer.
 
-```
-ArthDrishti/
-├── api/
-│   └── analysis.ts              # Vercel serverless — SSR meta tags for SEO
-│
-├── public/
-│   ├── favicon.ico
-│   ├── manifest.json            # PWA manifest
-│   ├── robots.txt
-│   └── sitemap.xml
-│
-├── src/
-│   ├── components/
-│   │   ├── ui/                  # shadcn/ui primitives (Button, Card, Dialog…)
-│   │   ├── results/             # Analysis result components
-│   │   │   ├── BusinessProfile.tsx      # Header — name, stage, tagline, badges
-│   │   │   ├── SwotGrid.tsx             # 2×2 SWOT grid
-│   │   │   ├── DeepAnalysis.tsx         # Business model & financials
-│   │   │   ├── FlowAnalysis.tsx         # Timeline / growth stages
-│   │   │   ├── DecisionIntelligence.tsx # Key strategic decisions
-│   │   │   ├── ComparisonSection.tsx    # Success vs failure company cards
-│   │   │   ├── SideBySide.tsx           # Factor-by-factor comparison table
-│   │   │   ├── WhereTheyWentWrong.tsx   # Wrong decision → root cause → fix
-│   │   │   ├── FinalLearnings.tsx       # 4-quadrant strategic takeaways
-│   │   │   └── SectionCard.tsx          # Shared section wrapper with accent bar
-│   │   ├── AnalysisResults.tsx  # Orchestrates all result sections
-│   │   ├── BusinessExplorer.tsx # 500+ companies across 18 categories
-│   │   ├── BusinessInput.tsx    # Search bar + analyze button
-│   │   ├── AuthModal.tsx        # Google / OTP login modal
-│   │   ├── FreemiumGate.tsx     # Daily limit paywall + share-to-unlock
-│   │   ├── Header.tsx           # Top nav + mobile bottom nav
-│   │   ├── NavLink.tsx          # Animated nav item
-│   │   └── ErrorBoundary.tsx    # React error boundary
-│   │
-│   ├── pages/
-│   │   ├── Index.tsx            # Homepage — hero, explorer, trending
-│   │   ├── Analysis.tsx         # /analysis/:id — full analysis page
-│   │   ├── BusinessOfDay.tsx    # /botd — daily AI case study
-│   │   ├── Simulator.tsx        # /simulator — decision quiz game
-│   │   ├── History.tsx          # /history — past analyses + watchlist
-│   │   └── NotFound.tsx         # 404 page
-│   │
-│   ├── lib/
-│   │   ├── api.ts               # All Supabase data fetching functions
-│   │   ├── auth.ts              # Auth helpers (signIn, signOut, useUser)
-│   │   ├── pro.ts               # Pro status checks + upgrade flow
-│   │   ├── streak.ts            # Daily streak, watchlist, quiz score (localStorage)
-│   │   ├── analytics.ts         # View count tracking
-│   │   └── utils.ts             # cn(), Tailwind merge helpers
-│   │
-│   ├── integrations/supabase/
-│   │   ├── client.ts            # Supabase client (anon key, public)
-│   │   └── types.ts             # Generated database types
-│   │
-│   ├── App.tsx                  # Router setup + theme provider
-│   ├── main.tsx                 # React entry point
-│   └── index.css                # Global styles + custom CSS utilities
-│
-├── supabase/
-│   ├── config.toml              # Supabase local dev config
-│   ├── migrations/              # Postgres schema migrations (5 files)
-│   │   ├── 20240619000000_initial_schema.sql
-│   │   ├── 20240619000001_cron_botd.sql
-│   │   ├── 20240619000002_pro_and_analytics.sql
-│   │   ├── 20240619000003_usage_and_cron_fix.sql
-│   │   └── 20240619000004_pro_user_link.sql
-│   └── functions/
-│       ├── analyze-business/        # Main AI analysis — calls Groq LLaMA
-│       ├── generate-botd/           # Business of the Day generator (cron)
-│       ├── create-razorpay-order/   # Create Razorpay payment order
-│       ├── verify-razorpay-payment/ # Verify Razorpay HMAC signature
-│       └── seed-data/               # Dev seed utility
-│
-├── .env.example                 # Template for required environment variables
-├── .gitignore                   # .env excluded — secrets never committed
-├── vercel.json                  # Vercel routing + security headers
-├── vite.config.ts               # Vite build config
-├── tailwind.config.ts           # Tailwind theme (custom fonts, colors)
-├── tsconfig.json                # TypeScript config
-└── package.json
-```
+### B. AI Analysis Pipeline
+
+When a user submits a business name, the frontend calls the `analyze-business` edge function. The function first queries the Wikipedia REST API (`/api/rest_v1/page/summary/{title}`) to retrieve a factual summary of the target entity, which is injected into the LLM prompt as grounding context. The enriched prompt is then dispatched to the Groq inference API using the `llama-3.3-70b-versatile` model with a structured JSON output schema. The schema enforces ten top-level fields covering business profile metadata, SWOT quadrants, deep analysis (USP, value proposition, cost structure, growth strategy), flow analysis (problem–strategy–execution–outcome), decision intelligence, peer comparisons, failure analysis, and final learnings. The edge function returns this structured JSON to the frontend, which persists it in the `analyses` table and routes the user to the results view.
+
+### C. Caching Strategy
+
+To minimize redundant inference cost and reduce user-perceived latency, the frontend checks the `analyses` table for a row matching the query string (case-insensitive, ILIKE) with a `created_at` timestamp within the preceding seven days before invoking the edge function. Cache hits are served directly from PostgreSQL with sub-100 ms response times. Cache misses trigger the full AI pipeline.
+
+### D. Rate Limiting and Access Control
+
+Unauthenticated and free-tier users are allotted three analyses per calendar day, tracked in browser localStorage and enforced server-side in the edge function via per-user-ID or per-IP-hash daily usage counters. Users who authenticate via Supabase Auth (Google OAuth or magic-link OTP) may unlock additional quota. Pro subscribers, identified by a cryptographically random UUID access token stored in localStorage and validated server-side against the `pro_subscriptions` table, receive unlimited daily analyses.
+
+### E. Payment Flow and Cryptographic Verification
+
+Pro subscriptions are priced at ₹199 per month and processed through Razorpay. Payment orders are created server-side in the `create-razorpay-order` edge function using HTTP Basic Auth with the Razorpay KEY_SECRET. Upon payment completion, Razorpay passes `payment_id`, `order_id`, and a `signature` to the frontend callback. The `verify-razorpay-payment` edge function recomputes the expected signature as `HMAC-SHA256(KEY_SECRET, order_id|payment_id)` and compares it against the received value using constant-time comparison to prevent timing attacks. On successful verification, a `pro_subscriptions` row is inserted with a UUID access token and a 30-day expiry timestamp. The KEY_SECRET is never transmitted to or stored by the frontend.
+
+### F. SEO and Social Sharing
+
+Because the application is a client-side SPA, social crawlers (Twitter Card, Open Graph, WhatsApp) receive a bare HTML shell without dynamic metadata. A Vercel serverless function (`api/analysis.ts`) intercepts all `/analysis/:id` requests, fetches the corresponding row from Supabase, injects dynamic `<title>`, `<meta name="description">`, `og:title`, `og:description`, and `twitter:*` tags into the pre-built `dist/index.html`, and returns the modified HTML. Regular browser visits receive the SPA and React hydrates normally.
+
+### G. Scheduled Content Generation
+
+A daily Business of the Day (BOTD) feature pre-generates an analysis for one business each day at 00:01 UTC using a pg_cron job. The cron schedule invokes the `generate-botd` edge function via pg_net HTTP trigger. The function deterministically selects a business from a rotating list of 30 Indian startups using `Math.floor(Date.now() / 86400000) % 30` as an index, invokes the same AI pipeline used for on-demand analyses, and upserts the result into the `business_of_the_day` table keyed on `featured_date`. Users visiting the `/botd` route receive the pre-cached result instantly.
 
 ---
 
-## Database Schema
+## III. Literature Survey
 
-```sql
--- Core analysis storage
-analyses (id, business_name, industry, stage, tagline,
-          analysis JSONB, view_count, created_at)
+### A. Large Language Models for Business Analysis
 
--- Business of the Day
-botd (id, business_name, content JSONB, date DATE, created_at)
+Prior work has demonstrated that LLMs such as GPT-4 [1] and LLaMA [2] can generate coherent business plans, strategic recommendations, and competitive analyses when given structured prompting. ArthDrishti builds on this capability by enforcing a fixed JSON output schema that constrains the model to produce consistently structured, machine-readable results rather than free-form prose.
 
--- Usage tracking (freemium quota)
-usage_logs (id, user_id, ip_hash, created_at)
+### B. Retrieval-Augmented Generation (RAG)
 
--- Pro subscriptions
-pro_users (id, user_id, razorpay_order_id, razorpay_payment_id,
-           plan, status, expires_at, created_at)
-```
+Retrieval-augmented generation [3] augments LLM outputs with retrieved factual documents to reduce hallucination. ArthDrishti implements a lightweight form of RAG by injecting Wikipedia page summaries into the LLM prompt before inference, grounding business-specific facts (founding dates, revenue, products) in a publicly maintained, factually reliable corpus.
 
----
+### C. Business Intelligence Tools
 
-## Edge Functions
+Traditional BI platforms such as Tableau, Power BI, and Looker [4] provide dashboards over structured numerical datasets but require pre-existing data pipelines and domain expertise to configure. Natural-language business analysis tools such as Perplexity AI [5] and ChatGPT plugins offer conversational interfaces but do not enforce structured output schemas or persist results for downstream consumption. ArthDrishti occupies a different point in this design space: structured schema enforcement, persistent storage, and a purpose-built UX tuned specifically for business analysis.
 
-| Function | Trigger | What it does |
-|---|---|---|
-| `analyze-business` | POST (frontend) | Calls Groq LLaMA 70B, stores result in DB |
-| `generate-botd` | pg_cron daily | Picks a business, generates case study, stores in `botd` |
-| `create-razorpay-order` | POST (checkout) | Creates Razorpay order with amount + metadata |
-| `verify-razorpay-payment` | POST (post-payment) | Verifies HMAC signature, upgrades user to Pro |
-| `seed-data` | Manual (dev) | Seeds sample analyses for local development |
+### D. Freemium SaaS Architecture
+
+The freemium model—offering a limited free tier with paid upgrade—is well-established in SaaS products [6]. ArthDrishti implements a dual enforcement strategy: client-side quota tracking in localStorage for low-latency feedback, with server-side enforcement in the edge function as the authoritative control. This mirrors the "optimistic UI with server-authoritative state" pattern common in modern SaaS applications.
+
+### E. Supabase as Backend-as-a-Service
+
+Supabase [7] provides a PostgreSQL database, authentication, storage, and Deno-based edge functions under a unified SDK. Its Row-Level Security feature, built on PostgreSQL's native RLS mechanism, enables declarative, per-table access control without an additional API gateway. ArthDrishti uses Supabase as its sole backend infrastructure provider, benefiting from automatic type generation from database schema via the Supabase CLI.
+
+### F. Vite and the Modern Frontend Build Ecosystem
+
+Vite [8], using the SWC Rust-based transpiler, provides significantly faster development server startup and hot-module replacement (HMR) compared to webpack-based toolchains. Manual chunk splitting in `vite.config.ts` separates vendor bundles (React, Radix UI, Supabase, Recharts, TanStack Query) to maximize long-term browser cache stability across deployments.
 
 ---
 
-## Security
+## IV. Implementation
 
-- **Groq API key** — stored only in Supabase edge function secrets, never in the browser bundle
-- **Razorpay KEY_SECRET** — stored only in Supabase edge function secrets
-- **Razorpay KEY_ID** — `VITE_RAZORPAY_KEY_ID` (public identifier, safe for frontend)
-- **`.env` excluded from git** — `.gitignore` blocks all `.env*` files
-- **Row-Level Security** — Supabase RLS policies on all tables
-- **Security headers** — `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy`, `X-XSS-Protection` via `vercel.json`
+### A. Technology Stack
 
----
+**Frontend:**
+- React 18.3.1 with TypeScript 5.8.3
+- Vite 5.4.19 with `@vitejs/plugin-react-swc` (SWC transpilation)
+- Tailwind CSS 3.4.17 with PostCSS and Autoprefixer
+- shadcn/ui built on Radix UI primitives (50+ components)
+- React Router DOM v6.30.1 (client-side routing)
+- TanStack Query v5.83.0 (async server state)
+- Framer Motion 11.0.0 (UI animations)
+- React Hook Form v7.61.1 with Zod v3.25.76 (form validation)
+- Recharts v2.15.4 (data visualization)
+- react-markdown v9.0.0 with remark-gfm v4.0.0 (markdown rendering)
+- Sonner v1.7.4 (toast notifications)
 
-## Environment Variables
+**Backend:**
+- Supabase PostgreSQL (data persistence, RLS, pg_cron, pg_net)
+- Supabase Auth (Google OAuth, magic-link OTP)
+- Supabase Edge Functions (Deno runtime, TypeScript)
+- Groq API — `llama-3.3-70b-versatile` model
+- Wikipedia REST API (factual context enrichment)
+- Razorpay (payment processing, HMAC-SHA256 signature verification)
 
-Copy `.env.example` to `.env` and fill in your values:
+**Infrastructure:**
+- Vercel (SPA hosting, serverless function for SSR meta tags)
+- GitHub (version control, CI/CD trigger for Vercel auto-deploy)
 
-```bash
-# Supabase — Dashboard → Project → Settings → API
-VITE_SUPABASE_URL=https://your-project-id.supabase.co
-VITE_SUPABASE_PUBLISHABLE_KEY=your_supabase_anon_key
-VITE_SUPABASE_PROJECT_ID=your_project_id
+### B. Key Modules
 
-# Razorpay KEY_ID only — KEY_SECRET goes in Supabase secrets
-VITE_RAZORPAY_KEY_ID=rzp_test_xxxxxxxxxxxx
-```
+**`src/lib/api.ts`** (299 lines) — Central API orchestration layer. Exports `analyzeBusiness()`, which implements cache lookup, rate-limit enforcement, edge function invocation, and result persistence. Also exports `saveAnalysis()`, `fetchRecentAnalyses()`, `fetchAnalysisById()`, and `incrementViewCount()`.
 
-**Supabase edge function secrets** (set via `supabase secrets set`):
-```
-GROQ_API_KEY=your_groq_api_key
-RAZORPAY_KEY_ID=your_razorpay_key_id
-RAZORPAY_KEY_SECRET=your_razorpay_key_secret
-```
+**`src/lib/auth.ts`** (35 lines) — `useAuth()` custom hook. Manages Supabase session state, exposes `signIn()` (Google OAuth and magic-link), `signOut()`, and the current `user` object with real-time session refresh.
 
----
+**`src/lib/pro.ts`** (76 lines) — `useProStatus()` custom hook. Reads and writes the pro access token from localStorage, validates expiry client-side, and calls the Supabase `pro_subscriptions` table for server-side verification to support cross-device sync.
 
-## Local Development
+**`src/lib/streak.ts`** (172 lines) — `useStreak()`, `useWatchlist()`, `useDailyLimit()`, and `useQuizScore()` hooks. Manages localStorage-persisted user engagement data: consecutive-day streaks, saved business watchlists, daily analysis quota tracking, and simulator quiz scores.
 
-```bash
-# 1. Clone
-git clone https://github.com/Akshadtech17/ArthDrishti-AI.git
-cd ArthDrishti-AI
+**`src/lib/analytics.ts`** — Fire-and-forget event telemetry. The `track()` function inserts rows into the `events` table for named events (e.g., `analysis_viewed`, `share_clicked`, `gate_signin_clicked`) with a JSONB properties payload. No personally identifiable information is stored.
 
-# 2. Install
-npm install
+**`src/components/AnalysisResults.tsx`** — Orchestrates the ten result section components. Receives the structured JSON analysis object and distributes sub-objects to the appropriate display components via props.
 
-# 3. Configure
-cp .env.example .env
-# Fill in Supabase and Razorpay values
+**`src/components/results/`** — Ten specialized display components: `BusinessProfile`, `SwotGrid`, `DeepAnalysis`, `FlowAnalysis`, `DecisionIntelligence`, `ComparisonSection`, `SideBySide`, `WhereTheyWentWrong`, `FinalLearnings`, and `SectionCard` (shared wrapper with accent bar).
 
-# 4. Run
-npm run dev
-# → http://localhost:8080
-```
+**`src/components/BusinessExplorer.tsx`** — Displays a categorized, clickable grid of 500+ companies across 18 industry categories. Clicking any company triggers an analysis. Categories include Global Giants, US Tech, China & Asia, Indian Startups, Healthcare, FinTech, SaaS, Retail, E-commerce, Edutech, and others.
 
-To run edge functions locally (requires Supabase CLI):
-```bash
-supabase start
-supabase functions serve
-```
+**`src/components/FreemiumGate.tsx`** — Renders the paywall UI when a user exceeds their daily quota. Offers three unlock paths: sign in with Google/email (bonus quota), share referral link (bonus quota), or upgrade to Pro via Razorpay checkout (unlimited access for 30 days).
 
----
+**`supabase/functions/analyze-business/index.ts`** — Primary inference edge function. Accepts `{ query, proToken }`, enforces rate limits, fetches Wikipedia context, dispatches to Groq LLaMA 70B with the structured JSON schema prompt, and returns the parsed analysis object.
 
-## Deployment
+**`supabase/functions/generate-botd/index.ts`** — Cron-triggered daily BOTD generator. Selects a business deterministically from a 30-item list, runs the same AI pipeline, and upserts into the `business_of_the_day` table.
 
-### Frontend → Vercel
+**`supabase/functions/create-razorpay-order/index.ts`** (61 lines) — Creates a Razorpay order for ₹199 (19,900 paise) server-side using the KEY_SECRET via HTTP Basic Auth.
 
-```bash
-npm install -g vercel
-vercel link --project arthdrishti-ai
-vercel --prod
-```
+**`supabase/functions/verify-razorpay-payment/index.ts`** (90 lines) — Verifies the Razorpay HMAC-SHA256 payment signature, creates a `pro_subscriptions` row with a UUID access token and 30-day expiry, and returns the token to the frontend.
 
-Vercel auto-deploys on every push to `main`.
+**`api/analysis.ts`** (Vercel serverless) — SSR meta tag injector for social sharing. Intercepts `/analysis/:id` requests from crawlers, fetches analysis metadata from Supabase, injects Open Graph and Twitter Card tags into the pre-built `index.html`, and returns the modified HTML.
 
-### Backend → Supabase Edge Functions
+### C. Database Schema
 
-```bash
-npm install -g supabase
-supabase login
-supabase link --project-ref nttrsltuequkgotwonpt
-supabase functions deploy analyze-business
-supabase functions deploy generate-botd
-supabase functions deploy create-razorpay-order
-supabase functions deploy verify-razorpay-payment
-```
+The PostgreSQL schema consists of four tables:
 
-Set secrets:
-```bash
-supabase secrets set GROQ_API_KEY=your_key
-supabase secrets set RAZORPAY_KEY_ID=your_key_id
-supabase secrets set RAZORPAY_KEY_SECRET=your_key_secret
-```
+- **`analyses`** — Stores AI-generated analysis results. Columns: `id` (UUID PK), `query` (TEXT), `business_name` (TEXT), `industry` (TEXT), `analysis_data` (JSONB), `view_count` (INTEGER), `created_at` (TIMESTAMPTZ). An atomic `increment_view_count(UUID)` RPC function prevents race conditions on concurrent view increments.
 
-### Database Migrations
+- **`business_of_the_day`** — Stores the daily curated analysis. Columns: `id` (UUID PK), `business_name` (TEXT), `analysis_data` (JSONB), `featured_date` (DATE, UNIQUE), `created_at` (TIMESTAMPTZ). The UNIQUE constraint on `featured_date` ensures only one BOTD per calendar day.
 
-```bash
-supabase db push
-```
+- **`pro_subscriptions`** — Tracks paid subscriptions. Columns: `id` (UUID PK), `access_token` (UUID, UNIQUE), `payment_id` (TEXT), `order_id` (TEXT), `user_id` (UUID, FK to `auth.users`), `expires_at` (TIMESTAMPTZ), `created_at` (TIMESTAMPTZ).
+
+- **`events`** — Anonymized telemetry log. Columns: `id` (UUID PK), `event_name` (TEXT), `properties` (JSONB), `created_at` (TIMESTAMPTZ).
+
+### D. Build and Deployment Configuration
+
+Vite's `manualChunks` configuration splits the production bundle into six vendor chunks (`vendor-react`, `vendor-ui`, `vendor-supabase`, `vendor-charts`, `vendor-query`, plus the application code) to maximize long-term HTTP caching. `vercel.json` configures a serverless function inclusion for the SSR analysis route, an SPA fallback rewrite (`/(.*) → /`), and security headers including `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `X-XSS-Protection`, and `Referrer-Policy`. Static assets under `/assets/` receive `Cache-Control: public, max-age=31536000, immutable`.
+
+### E. Testing
+
+Unit tests are configured with Vitest v3.2.4 in a jsdom environment (`vitest.config.ts`). End-to-end tests are configured with Playwright v1.57.0 (`playwright.config.ts`), with shared test fixtures defined in `playwright-fixture.ts`. ESLint 9 with `eslint-plugin-react-hooks` and `eslint-plugin-react-refresh` enforces code quality at development time.
+
+### F. PWA and Mobile Experience
+
+A `public/manifest.json` defines PWA metadata (app name, icons, display mode, theme color). The Header component renders a top navigation bar on desktop and tablet breakpoints, and a bottom tab navigation bar on mobile (via the `use-mobile` hook). Safe area insets (`env(safe-area-inset-bottom)`) are applied to the mobile bottom bar to support notched devices. Typography is set with Space Grotesk for headings and Inter for body text via Tailwind's `fontFamily` extension.
 
 ---
 
-## Scripts
+## V. Conclusion
 
-```bash
-npm run dev        # Dev server at localhost:8080
-npm run build      # Production build → dist/
-npm run preview    # Preview production build locally
-npm run lint       # ESLint
-npm run test       # Vitest unit tests
-```
+ArthDrishti demonstrates that a self-contained AI business intelligence platform can be built by composing mature open-source tooling (React, Vite, Tailwind CSS, shadcn/ui), managed backend services (Supabase), and hosted LLM inference (Groq). The structured JSON schema enforced at the LLM prompt level transforms unstructured model output into a consistent, typed data contract that drives a rich, multi-section UI. Wikipedia-based context injection provides a lightweight but effective guard against factual hallucination. The freemium model with Razorpay integration establishes a sustainable revenue path without requiring custom payment infrastructure. The combination of a 7-day analysis cache, pre-scheduled daily content, and client-side engagement features (streaks, watchlist, quiz) delivers a product experience that exceeds raw LLM interfaces while remaining accessible to users with no business analysis background.
 
 ---
 
-## Production Links
+## VI. Future Scope
 
-| Resource | URL |
-|---|---|
-| Live App | https://arthdrishti-ai.vercel.app |
-| GitHub | https://github.com/Akshadtech17/ArthDrishti-AI |
-| Supabase Dashboard | https://supabase.com/dashboard/project/nttrsltuequkgotwonpt |
-| Vercel Dashboard | https://vercel.com/akshads-projects-fb841962/arthdrishti-ai |
+1. **Expanded Data Sources:** Integration with financial data APIs (e.g., NSE/BSE data feeds, Alpha Vantage) to ground analyses in live revenue, market cap, and stock performance data rather than relying solely on Wikipedia summaries.
+
+2. **Multi-Model Support:** Adding support for additional LLM providers (e.g., Anthropic Claude, Google Gemini) via a provider-agnostic inference layer, enabling model quality comparisons and cost optimization through fallback routing.
+
+3. **User-Generated Annotations:** Allowing authenticated users to annotate analyses with personal notes, corrections, or alternative perspectives, creating a collaborative intelligence layer on top of the AI-generated baseline.
+
+4. **Portfolio Tracking:** Enabling users to define a custom portfolio of businesses and receive periodic AI-generated update summaries when significant market events affect tracked companies.
+
+5. **PDF and Report Export:** Generating downloadable, print-formatted PDF reports from the structured analysis data for use in academic submissions, pitch decks, and boardroom presentations.
+
+6. **Sector and Trend Dashboards:** Aggregating analysis data across multiple businesses in a sector to generate industry-wide trend visualizations, surfacing macro-level patterns in SWOT findings and strategic decisions.
+
+7. **Natural Language Q&A:** Implementing a conversational follow-up interface over completed analyses, allowing users to ask specific questions ("Why did this company fail in Southeast Asia?") grounded in the structured analysis context.
+
+8. **Enhanced Cross-Device Pro Sync:** Moving pro subscription state from localStorage tokens to server-linked user accounts, improving the experience for users who access the platform from multiple devices.
+
+9. **Global Business Coverage:** Extending the Business of the Day roster and Business Explorer categories beyond the current Indian startup focus to include businesses from other emerging markets (Southeast Asia, Africa, Latin America).
+
+10. **Offline Support:** Implementing a service worker to cache previously viewed analyses for offline reading, making the platform useful in low-connectivity environments.
 
 ---
 
-Built by [Akshad Aloni](https://github.com/Akshadtech17)
+## References
+
+[1] OpenAI, "GPT-4 Technical Report," arXiv preprint arXiv:2303.08774, 2023.
+
+[2] H. Touvron et al., "Llama 2: Open Foundation and Fine-Tuned Chat Models," arXiv preprint arXiv:2307.09288, 2023.
+
+[3] P. Lewis et al., "Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks," in *Advances in Neural Information Processing Systems*, vol. 33, 2020, pp. 9459–9474.
+
+[4] Microsoft, "Power BI Documentation," Microsoft Docs, 2024. [Online]. Available: https://learn.microsoft.com/en-us/power-bi/
+
+[5] Perplexity AI, "Perplexity AI Product Overview," 2024. [Online]. Available: https://www.perplexity.ai/
+
+[6] A. Osterwalder and Y. Pigneur, *Business Model Generation*. Hoboken, NJ: Wiley, 2010.
+
+[7] Supabase, "Supabase Documentation," 2024. [Online]. Available: https://supabase.com/docs
+
+[8] E. You, "Vite: Next Generation Frontend Tooling," 2024. [Online]. Available: https://vitejs.dev/
+
+[9] Groq, "Groq API Documentation," 2024. [Online]. Available: https://console.groq.com/docs
+
+[10] Razorpay, "Razorpay Payment Gateway Documentation," 2024. [Online]. Available: https://razorpay.com/docs/
+
+[11] Wikimedia Foundation, "Wikipedia REST API," 2024. [Online]. Available: https://en.wikipedia.org/api/rest_v1/
+
+[12] TanStack, "TanStack Query v5 Documentation," 2024. [Online]. Available: https://tanstack.com/query/v5
+
+[13] Radix UI, "Radix Primitives Documentation," 2024. [Online]. Available: https://www.radix-ui.com/
+
+[14] Vercel, "Vercel Platform Documentation," 2024. [Online]. Available: https://vercel.com/docs

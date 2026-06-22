@@ -1,0 +1,214 @@
+ArthDrishti — Project File Structure
+=====================================
+AI-powered business intelligence platform. React 18 + Vite SPA frontend,
+Supabase PostgreSQL + Deno edge functions backend, Groq LLaMA 70B inference.
+
+.
+├── api/
+│   └── analysis.ts               Vercel serverless function: injects SSR Open Graph / Twitter Card
+│                                 meta tags into dist/index.html for /analysis/:id social sharing
+│
+├── public/
+│   ├── favicon.ico               Browser tab icon
+│   ├── manifest.json             PWA manifest: app name, icons, display mode, theme color
+│   ├── robots.txt                Search engine crawl directives
+│   └── sitemap.xml               XML sitemap for SEO (lists public routes)
+│
+├── src/
+│   ├── main.tsx                  React entry point — mounts <App /> with ReactDOM.createRoot()
+│   ├── App.tsx                   Root component: React Router routes + QueryClientProvider +
+│   │                             TooltipProvider + Toaster wrapper
+│   ├── index.css                 Global Tailwind CSS directives, CSS variables for theme tokens,
+│   │                             custom utility classes (safe-area insets, animations)
+│   ├── App.css                   Component-level supplemental styles
+│   └── vite-env.d.ts             Vite client type declarations (import.meta.env types)
+│
+│   ├── pages/                    Route-level components (one per application page)
+│   │   ├── Index.tsx             / — Homepage: hero section, trending analyses, Business Explorer,
+│   │   │                         featured analysis card
+│   │   ├── Analysis.tsx          /analysis/:id — Full analysis results view; updates client-side
+│   │   │                         meta tags, increments view count, renders AnalysisResults
+│   │   ├── BusinessOfDay.tsx     /botd — Daily Business of the Day: fetches today's pre-generated
+│   │   │                         analysis from business_of_the_day table
+│   │   ├── Simulator.tsx         /simulator — Decision quiz game: 3-option multiple choice drawn
+│   │   │                         from real decision data in cached analyses
+│   │   ├── History.tsx           /history — Lists recent analyses with view counts, personal
+│   │   │                         watchlist, day streak, total analyses viewed, search filter
+│   │   └── NotFound.tsx          404 fallback page
+│   │
+│   ├── components/
+│   │   ├── AnalysisResults.tsx   Orchestrator: receives full analysis JSON, distributes sub-objects
+│   │   │                         to each of the 10 result section components via props
+│   │   ├── BusinessExplorer.tsx  Categorized grid of 500+ companies across 18 industry categories;
+│   │   │                         clicking a company triggers analyzeBusiness()
+│   │   ├── BusinessInput.tsx     Search bar + "Analyze" button; captures user input and calls
+│   │   │                         analyzeBusiness() from api.ts
+│   │   ├── AuthModal.tsx         Sign-in modal dialog: Google OAuth tab and Magic Link / OTP tab
+│   │   │                         powered by Supabase Auth
+│   │   ├── FreemiumGate.tsx      Paywall overlay shown when daily quota is exceeded; offers three
+│   │   │                         unlock paths: sign in, share link, or Razorpay Pro checkout
+│   │   ├── Header.tsx            Top navigation bar (desktop/tablet) + bottom tab navigation bar
+│   │   │                         (mobile); includes auth state, nav links
+│   │   ├── NavLink.tsx           Animated navigation link item with Framer Motion
+│   │   └── ErrorBoundary.tsx     React class error boundary that catches runtime render errors
+│   │                             and displays a fallback UI
+│   │
+│   │   ├── results/              Analysis result display components (one per analytical section)
+│   │   │   ├── SectionCard.tsx   Shared wrapper with left accent bar, section title, and
+│   │   │   │                     consistent padding used by all result sections
+│   │   │   ├── BusinessProfile.tsx  Header section: business name, industry, stage, tagline,
+│   │   │   │                        confidence rating badges
+│   │   │   ├── SwotGrid.tsx      2×2 SWOT matrix visualization: Strengths, Weaknesses,
+│   │   │   │                     Opportunities, Threats in color-coded quadrants
+│   │   │   ├── DeepAnalysis.tsx  USP, value proposition, cost structure, and growth strategy
+│   │   │   │                     breakdown from the deep analysis JSON object
+│   │   │   ├── FlowAnalysis.tsx  Narrative timeline displayed as: Problem → Strategy →
+│   │   │   │                     Execution → Outcome
+│   │   │   ├── DecisionIntelligence.tsx  List of key strategic decisions with associated
+│   │   │   │                             impact descriptions and outcomes
+│   │   │   ├── ComparisonSection.tsx     Side-by-side cards for successful vs. failed
+│   │   │   │                             comparable companies
+│   │   │   ├── SideBySide.tsx    Factor-by-factor comparison table across strategy, execution,
+│   │   │   │                     market fit, and scaling dimensions
+│   │   │   ├── WhereTheyWentWrong.tsx  Failure case study: wrong decision → root cause →
+│   │   │   │                           what the correct alternative would have been
+│   │   │   └── FinalLearnings.tsx      4-quadrant strategic takeaways: what to do, what to
+│   │   │                               avoid, decision frameworks, strategy rules
+│   │   │
+│   │   └── ui/                   50+ shadcn/ui component primitives (Radix UI + Tailwind CSS)
+│   │       ├── button.tsx        Button variants (default, outline, ghost, link, destructive)
+│   │       ├── card.tsx          Card, CardHeader, CardContent, CardFooter layout components
+│   │       ├── dialog.tsx        Accessible modal dialog (Radix Dialog primitive)
+│   │       ├── form.tsx          React Hook Form integration components
+│   │       ├── input.tsx         Styled text input field
+│   │       ├── select.tsx        Accessible dropdown select (Radix Select primitive)
+│   │       ├── tabs.tsx          Tab navigation component (Radix Tabs primitive)
+│   │       ├── accordion.tsx     Collapsible accordion (Radix Accordion primitive)
+│   │       ├── badge.tsx         Inline status/label badge
+│   │       ├── skeleton.tsx      Loading placeholder skeleton animations
+│   │       ├── toast.tsx         Toast notification component (Radix Toast primitive)
+│   │       ├── sonner.tsx        Sonner toast integration wrapper
+│   │       ├── chart.tsx         Recharts wrapper with theming support
+│   │       ├── carousel.tsx      Embla Carousel integration
+│   │       ├── sidebar.tsx       Collapsible sidebar layout component
+│   │       ├── input-otp.tsx     OTP digit entry for magic-link authentication
+│   │       ├── scroll-area.tsx   Custom scrollable area (Radix ScrollArea)
+│   │       ├── tooltip.tsx       Accessible tooltip (Radix Tooltip primitive)
+│   │       ├── popover.tsx       Floating popover panel (Radix Popover)
+│   │       ├── dropdown-menu.tsx Context-sensitive dropdown (Radix DropdownMenu)
+│   │       ├── alert-dialog.tsx  Confirmation dialog with cancel/confirm (Radix AlertDialog)
+│   │       ├── avatar.tsx        User avatar with image + fallback initials
+│   │       ├── progress.tsx      Linear progress bar (Radix Progress)
+│   │       ├── slider.tsx        Range slider input (Radix Slider)
+│   │       ├── switch.tsx        Toggle switch (Radix Switch)
+│   │       ├── checkbox.tsx      Checkbox input (Radix Checkbox)
+│   │       ├── radio-group.tsx   Radio button group (Radix RadioGroup)
+│   │       ├── separator.tsx     Horizontal or vertical visual divider
+│   │       ├── breadcrumb.tsx    Navigation breadcrumb trail
+│   │       ├── pagination.tsx    Page navigation controls
+│   │       ├── table.tsx         Semantic HTML table with styled rows/cells
+│   │       ├── calendar.tsx      Date picker calendar (react-day-picker)
+│   │       ├── drawer.tsx        Bottom/side drawer (vaul library)
+│   │       ├── sheet.tsx         Slide-in side panel (Radix Dialog variant)
+│   │       ├── resizable.tsx     Resizable panel splitter (react-resizable-panels)
+│   │       ├── menubar.tsx       Application-style horizontal menu bar (Radix Menubar)
+│   │       ├── navigation-menu.tsx  Horizontal navigation menu with dropdowns
+│   │       ├── context-menu.tsx  Right-click context menu (Radix ContextMenu)
+│   │       ├── hover-card.tsx    Preview card on hover (Radix HoverCard)
+│   │       ├── collapsible.tsx   Expand/collapse content (Radix Collapsible)
+│   │       ├── command.tsx       Command palette / searchable combobox (cmdk)
+│   │       ├── toggle.tsx        Two-state toggle button (Radix Toggle)
+│   │       ├── alert.tsx         Inline alert/callout message block
+│   │       ├── aspect-ratio.tsx  Fixed aspect ratio container (Radix AspectRatio)
+│   │       ├── use-toast.ts      Toast queue state hook
+│   │       └── use-mobile.tsx    Returns true when viewport is below mobile breakpoint
+│   │
+│   ├── lib/
+│   │   ├── api.ts                Core data access layer (299 lines): analyzeBusiness() with
+│   │   │                         7-day cache lookup, edge function invocation, result persistence;
+│   │   │                         fetchRecentAnalyses(), fetchAnalysisById(), incrementViewCount()
+│   │   ├── auth.ts               useAuth() hook: Supabase session management, signIn() for
+│   │   │                         Google OAuth and magic-link, signOut(), current user object
+│   │   ├── pro.ts                useProStatus() hook: reads/writes pro token from localStorage,
+│   │   │                         validates expiry, cross-device sync via Supabase query
+│   │   ├── streak.ts             useStreak(), useWatchlist(), useDailyLimit(), useQuizScore()
+│   │   │                         hooks: localStorage-persisted engagement state
+│   │   ├── analytics.ts          track() function: fire-and-forget event telemetry to events table
+│   │   └── utils.ts              cn() utility: tailwind-merge + clsx for conditional class names
+│   │
+│   ├── integrations/supabase/
+│   │   ├── client.ts             Supabase client singleton (createClient with localStorage
+│   │   │                         auth persistence and auto token refresh)
+│   │   └── types.ts              Auto-generated TypeScript types from Supabase database schema
+│   │
+│   ├── hooks/
+│   │   ├── use-mobile.tsx        Responsive breakpoint hook (mirrors ui/use-mobile.tsx)
+│   │   └── use-toast.ts          Toast notification hook wrapper
+│   │
+│   └── __tests__/
+│       ├── core.test.ts          Unit tests for core library functions
+│       └── setup.ts              Vitest test environment setup (@testing-library/jest-dom)
+│
+├── supabase/
+│   ├── config.toml               Supabase CLI local development configuration (project ref,
+│   │                             ports, auth providers, edge function environment)
+│   │
+│   ├── migrations/               Ordered SQL migration files applied by supabase db push
+│   │   ├── 20240619000000_initial_schema.sql     Creates analyses and business_of_the_day
+│   │   │                                         tables with RLS policies and indexes
+│   │   ├── 20240619000001_cron_botd.sql          Registers pg_cron schedule + pg_net HTTP
+│   │   │                                         call to generate-botd at 00:01 UTC daily
+│   │   ├── 20240619000002_pro_and_analytics.sql  Creates pro_subscriptions and events tables
+│   │   │                                         with RLS policies
+│   │   ├── 20240619000003_usage_and_cron_fix.sql Adds usage tracking table for server-side
+│   │   │                                         daily rate limiting; fixes cron schedule
+│   │   └── 20240619000004_pro_user_link.sql      Adds user_id foreign key to pro_subscriptions
+│   │                                             linking subscriptions to auth.users
+│   │
+│   └── functions/                Deno (TypeScript) edge functions deployed on Supabase
+│       ├── analyze-business/
+│       │   └── index.ts          PRIMARY AI function: accepts {query, proToken}, enforces
+│       │                         rate limits, fetches Wikipedia context, calls Groq LLaMA
+│       │                         3.3 70B with structured JSON schema, returns analysis
+│       ├── generate-botd/
+│       │   └── index.ts          Cron-triggered: deterministically selects daily business,
+│       │                         runs full AI pipeline, upserts into business_of_the_day
+│       ├── create-razorpay-order/
+│       │   └── index.ts          Creates Razorpay payment order for ₹199 (19900 paise)
+│       │                         server-side using KEY_SECRET via HTTP Basic Auth
+│       ├── verify-razorpay-payment/
+│       │   └── index.ts          Verifies HMAC-SHA256 payment signature, inserts pro
+│       │                         subscription row with UUID access token + 30-day expiry
+│       └── seed-data/
+│           └── index.ts          Dev utility: seeds sample analyses into the analyses table
+│
+├── Configuration Files
+│   ├── package.json              npm scripts (dev, build, lint, preview, test, test:watch)
+│   │                             and all frontend dependencies
+│   ├── vite.config.ts            Vite build configuration: SWC plugin, port 8080 dev server,
+│   │                             manual chunk splitting into 5 vendor bundles
+│   ├── tailwind.config.ts        Tailwind theme extension: Space Grotesk + Inter fonts,
+│   │                             CSS variable-driven color tokens, custom border radius
+│   ├── postcss.config.js         PostCSS pipeline: tailwindcss + autoprefixer
+│   ├── tsconfig.json             Root TypeScript project references config
+│   ├── tsconfig.app.json         App TypeScript config: React JSX, ES2020 target,
+│   │                             path alias @/ → src/
+│   ├── tsconfig.node.json        TypeScript config for Node.js build tooling (vite.config.ts)
+│   ├── components.json           shadcn/ui CLI configuration: style, base color, icon library,
+│   │                             component output paths
+│   ├── eslint.config.js          ESLint 9 flat config: react-hooks and react-refresh rules
+│   ├── vercel.json               Vercel deployment config: SSR function for /analysis/:id,
+│   │                             SPA fallback rewrite, security headers, 1-year asset cache
+│   ├── vitest.config.ts          Vitest unit test config: jsdom environment, setup file path
+│   ├── playwright.config.ts      Playwright E2E test config: test directory, browsers, base URL
+│   ├── playwright-fixture.ts     Shared Playwright test fixtures and helper utilities
+│   ├── .env.example              Template listing required environment variables with
+│   │                             placeholder values (never contains real secrets)
+│   ├── .gitignore                Excludes .env*, node_modules/, dist/, .vercel/ from git
+│   └── bun.lock                  Bun package manager lockfile (mirrors package-lock.json)
+│
+├── dist/                         Production build output generated by vite build
+│   │                             (committed only as needed for Vercel SSR function)
+│   └── index.html                Built SPA shell; used by api/analysis.ts for meta tag injection
+│
+└── node_modules/                 Installed npm dependencies (excluded from git)

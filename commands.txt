@@ -1,0 +1,261 @@
+ArthDrishti — Command Reference
+================================
+All commands needed to work with the project, grouped by phase.
+Prerequisites: Node.js 18+, npm, Supabase CLI, Git.
+
+================================================================================
+SETUP / INSTALLATION
+================================================================================
+
+Clone the repository:
+  git clone https://github.com/Akshadtech17/ArthDrishti-AI.git
+  cd ArthDrishti-AI
+  -- Downloads the source code and enters the project directory.
+
+Install frontend dependencies:
+  npm install
+  -- Installs all packages listed in package.json into node_modules/.
+  -- Alternative with Bun (faster): bun install
+
+Copy the environment variable template:
+  cp .env.example .env
+  -- Creates a local .env file from the template. You must fill in the
+     actual values before running the app.
+
+Required values in .env:
+  VITE_SUPABASE_URL=https://<your-project-id>.supabase.co
+  VITE_SUPABASE_PUBLISHABLE_KEY=<supabase_anon_key>
+  VITE_SUPABASE_PROJECT_ID=<your_project_id>
+  VITE_RAZORPAY_KEY_ID=rzp_test_xxxxxxxxxxxx
+  -- VITE_ prefix exposes these to the Vite build; never add secret keys here.
+
+Install the Supabase CLI (if not already installed):
+  npm install -g supabase
+  -- Global install required for database migrations and edge function deployment.
+
+Install the Vercel CLI (optional, for manual deployments):
+  npm install -g vercel
+  -- Enables `vercel dev`, `vercel deploy`, and `vercel env` commands locally.
+
+================================================================================
+ENVIRONMENT / DEPENDENCIES
+================================================================================
+
+Start a local Supabase stack (DB + Auth + Edge Functions):
+  supabase start
+  -- Starts Docker-based local Supabase services on default ports:
+     DB:            postgresql://localhost:54322
+     API:           http://localhost:54321
+     Studio:        http://localhost:54323
+     Edge Functions: http://localhost:54321/functions/v1/<name>
+  -- Requires Docker Desktop to be running.
+
+Stop the local Supabase stack:
+  supabase stop
+  -- Shuts down all local Supabase Docker containers.
+
+Apply database migrations to local Supabase:
+  supabase db push
+  -- Runs all SQL files in supabase/migrations/ in chronological order.
+  -- Run after supabase start to initialize the local schema.
+
+Apply database migrations to remote Supabase (production):
+  supabase db push --linked
+  -- Applies migrations to the linked remote project (see supabase link below).
+
+Link the CLI to your remote Supabase project:
+  supabase link --project-ref <your_project_id>
+  -- Associates local CLI with the remote project for push/pull operations.
+  -- Project ID is found in the Supabase dashboard URL.
+
+Pull remote database types into TypeScript:
+  supabase gen types typescript --linked > src/integrations/supabase/types.ts
+  -- Regenerates src/integrations/supabase/types.ts from the live database schema.
+  -- Run whenever the database schema changes.
+
+Set edge function secrets (production):
+  supabase secrets set GROQ_API_KEY=<your_groq_api_key>
+  supabase secrets set RAZORPAY_KEY_ID=<your_razorpay_key_id>
+  supabase secrets set RAZORPAY_KEY_SECRET=<your_razorpay_key_secret>
+  -- Stores secrets in the Supabase vault; edge functions read these at runtime.
+  -- Never put these values in .env or commit them to git.
+
+List currently set edge function secrets:
+  supabase secrets list
+  -- Shows the names of all secrets set for the project (values are not shown).
+
+Pull environment variables from Vercel to a local file:
+  vercel env pull .env.local
+  -- Syncs Vercel project environment variables to a local .env.local file.
+  -- Requires the Vercel CLI and an authenticated session (vercel login).
+
+Serve edge functions locally with a custom .env:
+  supabase functions serve --env-file .env.local
+  -- Starts the local Deno runtime for all edge functions in supabase/functions/.
+  -- Reads secrets from .env.local instead of the Supabase vault for local dev.
+
+================================================================================
+RUNNING THE PROJECT
+================================================================================
+
+Start the Vite development server:
+  npm run dev
+  -- Starts the frontend at http://localhost:8080 with hot-module replacement.
+  -- Changes to src/ files update the browser instantly without a full reload.
+
+Start the Vite dev server and serve edge functions together (two terminals):
+  Terminal 1: supabase functions serve --env-file .env.local
+  Terminal 2: npm run dev
+  -- Run both simultaneously to test the full stack locally. Edge functions
+     are available at http://localhost:54321/functions/v1/<function-name>.
+
+Invoke a specific local edge function manually (example):
+  curl -i --location --request POST \
+    http://localhost:54321/functions/v1/analyze-business \
+    --header "Authorization: Bearer <supabase_anon_key>" \
+    --header "Content-Type: application/json" \
+    --data '{"query":"Zerodha"}'
+  -- Sends a test request to the analyze-business function running locally.
+  -- Replace <supabase_anon_key> with the value from supabase start output.
+
+Seed the local database with sample analyses (dev only):
+  curl -i --location --request POST \
+    http://localhost:54321/functions/v1/seed-data \
+    --header "Authorization: Bearer <supabase_anon_key>"
+  -- Calls the seed-data edge function to insert sample rows into analyses table.
+
+================================================================================
+BUILDING
+================================================================================
+
+Build the production bundle:
+  npm run build
+  -- Compiles and bundles src/ into dist/ using Vite with SWC.
+  -- Output includes index.html and hashed vendor chunk JS/CSS files.
+  -- Vendor chunks: vendor-react, vendor-ui, vendor-supabase, vendor-charts,
+     vendor-query (split via manualChunks in vite.config.ts).
+
+Build in development mode (unminified, with source maps):
+  npm run build:dev
+  -- Runs vite build --mode development for debugging production builds.
+
+Preview the production build locally:
+  npm run preview
+  -- Serves the dist/ folder at http://localhost:4173.
+  -- Use to verify the production build behaves correctly before deploying.
+
+================================================================================
+TESTING
+================================================================================
+
+Run unit tests (single pass):
+  npm run test
+  -- Executes all *.test.ts(x) files in src/__tests__/ and src/test/ using
+     Vitest in a jsdom environment. Exits after one full run.
+
+Run unit tests in watch mode:
+  npm run test:watch
+  -- Re-runs affected tests on every file save. Useful during development.
+
+Run ESLint static analysis:
+  npm run lint
+  -- Checks all .ts and .tsx files against ESLint 9 rules (react-hooks,
+     react-refresh). Fix reported issues before committing.
+
+Install Playwright browsers (first-time E2E setup):
+  npx playwright install
+  -- Downloads Chromium, Firefox, and WebKit browser binaries for Playwright.
+  -- Only needed once per machine.
+
+Run Playwright end-to-end tests:
+  npx playwright test
+  -- Executes E2E tests in playwright.config.ts against the running dev or
+     preview server. Requires the app to be running separately.
+
+Run Playwright tests with UI (interactive):
+  npx playwright test --ui
+  -- Opens the Playwright test runner UI for step-by-step inspection.
+
+View the last Playwright test report:
+  npx playwright show-report
+  -- Opens the HTML report from the most recent test run in a browser.
+
+================================================================================
+DEPLOYMENT
+================================================================================
+
+--- Frontend (Vercel) ---
+
+Deploy a preview (non-production) build to Vercel:
+  vercel
+  -- Builds and deploys to a unique preview URL. Use for review and testing.
+  -- Requires `vercel login` and the project to be linked (vercel link).
+
+Deploy to Vercel production:
+  vercel --prod
+  -- Deploys to the production domain (arthdrishti-ai.vercel.app).
+  -- Vercel also auto-deploys to production on every push to the main branch
+     via GitHub integration (no CLI needed for normal workflow).
+
+Link the local directory to a Vercel project:
+  vercel link
+  -- Associates the current directory with an existing Vercel project.
+  -- Run once when setting up a new machine.
+
+Add or update a Vercel environment variable:
+  vercel env add <NAME>
+  -- Interactive prompt to set an environment variable for preview/production.
+
+List Vercel environment variables:
+  vercel env ls
+  -- Shows all environment variable names configured in the Vercel project.
+
+--- Edge Functions (Supabase) ---
+
+Deploy a single edge function to production:
+  supabase functions deploy analyze-business
+  supabase functions deploy generate-botd
+  supabase functions deploy create-razorpay-order
+  supabase functions deploy verify-razorpay-payment
+  -- Uploads and deploys the specified function from supabase/functions/<name>/.
+  -- Run after any change to edge function source code.
+
+Deploy all edge functions at once:
+  supabase functions deploy
+  -- Deploys every function in supabase/functions/ to the linked remote project.
+
+Check edge function logs (tail live logs):
+  supabase functions logs analyze-business --tail
+  -- Streams live invocation logs for the specified function.
+  -- Useful for debugging production errors in real time.
+
+--- Database ---
+
+Run a database migration against the linked remote project:
+  supabase db push --linked
+  -- Applies any unapplied migration files in supabase/migrations/ to production.
+
+Reset the local database to a clean state and re-apply all migrations:
+  supabase db reset
+  -- Drops and recreates the local DB, then replays all migrations from scratch.
+  -- WARNING: destroys all local data; do not run against production.
+
+================================================================================
+GIT WORKFLOW
+================================================================================
+
+Check current working tree status:
+  git status
+
+Stage and commit changes:
+  git add <file>
+  git commit -m "your commit message"
+
+Push to GitHub (triggers Vercel auto-deploy to production):
+  git push origin main
+  -- Vercel's GitHub integration detects the push and deploys automatically.
+
+Create a feature branch (to avoid direct commits to main):
+  git checkout -b feature/<branch-name>
+  git push origin feature/<branch-name>
+  -- Push this branch to get a Vercel preview URL without touching production.
